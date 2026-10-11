@@ -2,6 +2,8 @@
 
 Implementación en Python del método de **Balado & Biljecki (2026)**, *Direct 3D extreme rainfall risk mapping from urban aerial LiDAR point clouds*, ISPRS Annals XII-4/W1-2026, 33–40 ([doi](https://doi.org/10.5194/isprs-annals-XII-4-W1-2026-33-2026)). El código MATLAB de los autores está en [jbalado/ALS_Flood3D](https://github.com/jbalado/ALS_Flood3D).
 
+![als-flood3d: el agua se acumula en la vaguada (ACU) y escurre por tejados inclinados y calles (RUN)](docs/img/ilustracion.svg)
+
 Enriquece cada punto de una nube LiDAR aérea (ALS) clasificada con dos indicadores de riesgo por lluvia extrema. No hace falta reconstruir antes ninguna superficie (ni DTM ni malla). Incluye un visor 3D en HTML para explorar el resultado.
 
 | Campo | Ecuación | Significado |
@@ -153,7 +155,8 @@ src/als_flood3d/
   synthetic.py           Escena sintética para tests y demo
   cli.py                 CLI als-flood3d
 examples/                Teselas de Madrid, demo sintética y salidas
-docs/img/                Capturas del visor (datos de Madrid)
+docs/img/                Ilustración del método (SVG) y capturas del visor (datos de Madrid)
+docs/make_illustration.py  Genera docs/img/ilustracion.svg
 tests/                   pytest
 ```
 
