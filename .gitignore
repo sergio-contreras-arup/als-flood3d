@@ -1,0 +1,13 @@
+__pycache__/
+*.py[cod]
+*.egg-info/
+build/
+dist/
+.venv/
+venv/
+.pytest_cache/
+out/
+
+# Point clouds: too large for GitHub (>100 MB per file)
+*.las
+*.laz

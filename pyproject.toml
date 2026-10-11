@@ -1,0 +1,31 @@
+[build-system]
+requires = ["setuptools>=68"]
+build-backend = "setuptools.build_meta"
+
+[project]
+name = "als-flood3d"
+version = "0.1.0"
+description = "Direct 3D extreme rainfall risk mapping (water accumulation + runoff) on ALS point clouds"
+readme = "README.md"
+requires-python = ">=3.10"
+dependencies = [
+    "numpy>=1.24",
+    "scipy>=1.10",
+    "laspy[lazrs]>=2.4",
+]
+
+[project.optional-dependencies]
+dev = ["pytest>=7"]
+
+[project.scripts]
+als-flood3d = "als_flood3d.cli:main"
+als-flood3d-view = "als_flood3d.viewer:main"
+
+[tool.setuptools.packages.find]
+where = ["src"]
+
+[tool.setuptools.package-data]
+als_flood3d = ["*.html"]
+
+[tool.pytest.ini_options]
+testpaths = ["tests"]
