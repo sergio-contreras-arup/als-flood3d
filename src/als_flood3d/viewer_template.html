@@ -320,7 +320,11 @@ function drawLegend() {
 // ---------- UI ----------
 $('title').textContent = META.title;
 const info = { ...META.info, 'Mostrados': `${fmt.format(n)} (muestra aleatoria)` };
-$('info').innerHTML = Object.entries(info).map(([k, v]) => `<dt>${k}</dt><dd>${v}</dd>`).join('');
+{ const dl = $('info'); dl.replaceChildren();
+  for (const [k, v] of Object.entries(info)) {
+    const dt = document.createElement('dt'); dt.textContent = k;
+    const dd = document.createElement('dd'); dd.textContent = v;
+    dl.append(dt, dd); } }
 
 const counts = {};
 for (let i = 0; i < n; i++) counts[cls[i]] = (counts[cls[i]] || 0) + 1;

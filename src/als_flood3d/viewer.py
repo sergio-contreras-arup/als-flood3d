@@ -16,7 +16,9 @@ from __future__ import annotations
 
 import argparse
 import base64
+import html as html_mod
 import json
+import re
 from importlib import resources
 from pathlib import Path
 
@@ -77,12 +79,18 @@ def export_html(
     )
 
     template = resources.files("als_flood3d").joinpath("viewer_template.html").read_text(encoding="utf-8")
-    html = (
-        template.replace("__TITLE__", title)
-        .replace("__META__", json.dumps(meta))
-        .replace("__DATA__", base64.b64encode(blob).decode("ascii"))
-    )
-    Path(path).write_text(html, encoding="utf-8")
+    # Escape at generation time so a malicious string in title/meta (e.g. an
+    # input file name) cannot inject markup or break out of the JSON <script> block.
+    meta_json = json.dumps(meta).replace("<", "\\u003c").replace(">", "\\u003e").replace("&", "\\u0026")
+    subs = {
+        "__TITLE__": html_mod.escape(title),
+        "__META__": meta_json,
+        "__DATA__": base64.b64encode(blob).decode("ascii"),
+    }
+    # Single pass so a value equal to a placeholder token (e.g. a file named
+    # "__DATA__") cannot be rewritten by a later substitution.
+    rendered = re.sub(r"__TITLE__|__META__|__DATA__", lambda m: subs[m.group(0)], template)
+    Path(path).write_text(rendered, encoding="utf-8")
     return len(idx)
 
 
