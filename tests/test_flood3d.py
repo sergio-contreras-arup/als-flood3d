@@ -143,3 +143,70 @@ def test_voxel_downsample_one_point_per_voxel():
 
     pts = np.array([[0.1, 0.1, 0.1], [0.2, 0.2, 0.2], [1.5, 0.1, 0.1], [0.1, 0.1, 1.5]])
     assert voxel_downsample(pts, 1.0).tolist() == [0, 2, 3]
+
+
+def test_viewer_escapes_hostile_file_names(tmp_path):
+    """Regression: a point-cloud file name must not inject markup into the viewer (CWE-79).
+
+    The viewer renders info values with textContent and escapes the title and the
+    meta JSON at generation time, so a basename containing HTML stays inert text.
+    """
+    import json
+    import re
+
+    from als_flood3d.viewer import export_html
+
+    xyz = np.random.default_rng(0).random((20, 3)) * 100
+    acu = np.random.default_rng(1).random(20)
+    run = np.random.default_rng(2).random(20)
+    payload = "<img src=x onerror=window.__pwned=1></script>.laz"
+
+    out = tmp_path / "v.html"
+    export_html(out, xyz, acu, run, title="</title><script>alert(1)</script>",
+                info={"Ficheros": payload})
+    html = out.read_text()
+
+    # No raw payload markup appears anywhere in the generated file, and a
+    # </script> inside a value is escaped so it cannot close the meta block early.
+    assert "<img" not in html
+    assert "\\u003c/script\\u003e" in html
+
+    meta_block = re.search(r'id="meta" type="application/json">(.*?)</script>', html, re.S).group(1)
+    assert "\\u003cimg" in meta_block
+
+    # The title is HTML-escaped in <title>, so it cannot close the element.
+    assert "</title><script>" not in html
+    assert "&lt;/title&gt;" in html
+
+    # (The info panel's DOM rendering and the absence of any innerHTML sink are
+    # covered behaviourally above and by test_viewer_uses_no_innerhtml.)
+
+    # The displayed value is still recoverable (JSON.parse decodes the escapes),
+    # so legitimate file names remain readable in the viewer.
+    assert json.loads(meta_block)["info"]["Ficheros"] == payload
+
+
+def test_viewer_uses_no_innerhtml(tmp_path):
+    """Regression (issue #2): no viewer sink builds markup with innerHTML.
+
+    All dynamic panels are rendered via textContent/DOM, so a value derived from
+    file or point-cloud metadata cannot inject markup.
+    """
+    from als_flood3d.viewer import export_html
+
+    xyz = np.random.default_rng(0).random((20, 3)) * 100
+    out = tmp_path / "v.html"
+    export_html(out, xyz, xyz[:, 0], xyz[:, 1], classification=np.full(20, 6))
+    assert ".innerHTML" not in out.read_text()
+
+
+def test_viewer_export_accepts_list_inputs(tmp_path):
+    """Regression (issue #3): export_html tolerates Python lists, not only ndarrays."""
+    from als_flood3d.viewer import export_html
+
+    xyz = (np.random.default_rng(0).random((10, 3)) * 100).tolist()
+    acu = [float(i) for i in range(10)]
+    run = [float("nan")] + [0.5] * 9  # exercises run[np.isfinite(run)]
+    out = tmp_path / "v.html"
+    n = export_html(out, xyz, acu, run, max_points=5000)
+    assert n == 10 and out.exists()
