@@ -63,6 +63,9 @@ def export_html(
     seed: int = 0,
 ) -> int:
     """Write the viewer and return the number of points embedded."""
+    # Accept a list for run: run[np.isfinite(run)] below needs an ndarray.
+    # (xyz and acu are re-wrapped with np.asarray where they are used.)
+    run = np.asarray(run)
     n_total = len(xyz)
     idx = np.arange(n_total)
     if n_total > max_points:

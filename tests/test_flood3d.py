@@ -178,10 +178,35 @@ def test_viewer_escapes_hostile_file_names(tmp_path):
     assert "</title><script>" not in html
     assert "&lt;/title&gt;" in html
 
-    # The info panel is built with the DOM, not innerHTML, so values render as text.
-    assert "$('info').innerHTML" not in html
-    assert "replaceChildren" in html
+    # (The info panel's DOM rendering and the absence of any innerHTML sink are
+    # covered behaviourally above and by test_viewer_uses_no_innerhtml.)
 
     # The displayed value is still recoverable (JSON.parse decodes the escapes),
     # so legitimate file names remain readable in the viewer.
     assert json.loads(meta_block)["info"]["Ficheros"] == payload
+
+
+def test_viewer_uses_no_innerhtml(tmp_path):
+    """Regression (issue #2): no viewer sink builds markup with innerHTML.
+
+    All dynamic panels are rendered via textContent/DOM, so a value derived from
+    file or point-cloud metadata cannot inject markup.
+    """
+    from als_flood3d.viewer import export_html
+
+    xyz = np.random.default_rng(0).random((20, 3)) * 100
+    out = tmp_path / "v.html"
+    export_html(out, xyz, xyz[:, 0], xyz[:, 1], classification=np.full(20, 6))
+    assert ".innerHTML" not in out.read_text()
+
+
+def test_viewer_export_accepts_list_inputs(tmp_path):
+    """Regression (issue #3): export_html tolerates Python lists, not only ndarrays."""
+    from als_flood3d.viewer import export_html
+
+    xyz = (np.random.default_rng(0).random((10, 3)) * 100).tolist()
+    acu = [float(i) for i in range(10)]
+    run = [float("nan")] + [0.5] * 9  # exercises run[np.isfinite(run)]
+    out = tmp_path / "v.html"
+    n = export_html(out, xyz, acu, run, max_points=5000)
+    assert n == 10 and out.exists()

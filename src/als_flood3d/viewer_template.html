@@ -288,11 +288,25 @@ function refilter() {
 }
 
 // ---------- legend ----------
+function legendNote(text) {
+  const frag = document.createDocumentFragment();
+  const h2 = document.createElement('h2'); h2.textContent = 'Leyenda';
+  const sub = document.createElement('div'); sub.className = 'sub'; sub.textContent = text;
+  frag.append(h2, sub); return frag;
+}
 function rampLegend(L, caption, left, right, note) {
   const el = $('legend');
-  el.innerHTML = `<h2>Leyenda</h2><div class="cap">${caption}</div><canvas width="256" height="1"></canvas>
-    <div class="ticks"><span>${left}</span><span>${right}</span></div>${note ? `<div class="note">${note}</div>` : ''}`;
-  const ctx = el.querySelector('canvas').getContext('2d');
+  el.replaceChildren();
+  const h2 = document.createElement('h2'); h2.textContent = 'Leyenda';
+  const cap = document.createElement('div'); cap.className = 'cap'; cap.textContent = caption;
+  const canvas = document.createElement('canvas'); canvas.width = 256; canvas.height = 1;
+  const ticks = document.createElement('div'); ticks.className = 'ticks';
+  const sL = document.createElement('span'); sL.textContent = left;
+  const sR = document.createElement('span'); sR.textContent = right;
+  ticks.append(sL, sR);
+  el.append(h2, cap, canvas, ticks);
+  if (note) { const nd = document.createElement('div'); nd.className = 'note'; nd.textContent = note; el.append(nd); }
+  const ctx = canvas.getContext('2d');
   const img = ctx.createImageData(256, 1);
   for (let i = 0; i < 256; i++) { img.data.set([L[i*3], L[i*3+1], L[i*3+2], 255], i * 4); }
   ctx.putImageData(img, 0, 0);
@@ -311,9 +325,10 @@ function drawLegend() {
   } else if (state.mode === 'z') {
     rampLegend(RAMPS.z, 'Cota (m)', lo[2].toFixed(1), hi[2].toFixed(1));
   } else if (state.mode === 'cls') {
-    el.innerHTML = '<h2>Leyenda</h2><div class="sub">Colores en la lista de clases.</div>';
+    el.replaceChildren(legendNote('Colores en la lista de clases.'));
   } else {
-    el.innerHTML = META.hasRgb ? '' : '<h2>Leyenda</h2><div class="sub">La nube no tiene RGB.</div>';
+    el.replaceChildren();
+    if (!META.hasRgb) el.append(legendNote('La nube no tiene RGB.'));
   }
 }
 
@@ -328,11 +343,17 @@ const info = { ...META.info, 'Mostrados': `${fmt.format(n)} (muestra aleatoria)`
 
 const counts = {};
 for (let i = 0; i < n; i++) counts[cls[i]] = (counts[cls[i]] || 0) + 1;
-$('classes').innerHTML = Object.keys(counts).map(Number).sort((a, b) => a - b).map(c => {
-  const [name, col] = classInfo(c);
-  return `<label><input type="checkbox" data-cls="${c}" ${state.hidden.has(c) ? '' : 'checked'}>
-    <span class="sw" style="background:${col}"></span>${c} · ${name}<span class="n">${fmt.format(counts[c])}</span></label>`;
-}).join('');
+{ const box = $('classes'); box.replaceChildren();
+  for (const c of Object.keys(counts).map(Number).sort((a, b) => a - b)) {
+    const [name, col] = classInfo(c);
+    const label = document.createElement('label');
+    const cb = document.createElement('input');
+    cb.type = 'checkbox'; cb.dataset.cls = c; cb.checked = !state.hidden.has(c);
+    const sw = document.createElement('span'); sw.className = 'sw'; sw.style.background = col;
+    const nspan = document.createElement('span'); nspan.className = 'n'; nspan.textContent = fmt.format(counts[c]);
+    label.append(cb, sw, document.createTextNode(`${c} · ${name}`), nspan);
+    box.append(label);
+  } }
 $('classes').addEventListener('change', (e) => {
   const c = +e.target.dataset.cls;
   e.target.checked ? state.hidden.delete(c) : state.hidden.add(c);
@@ -385,11 +406,19 @@ renderer.domElement.addEventListener('pointerup', (e) => {
   marker.scale.setScalar(raycaster.params.Points.threshold * 0.6);
   marker.visible = true;
   const x = pos[i*3] + center[0], y = pos[i*3+1] + center[1], z = pos[i*3+2] + center[2];
-  box.innerHTML = `<h2>Punto</h2><dl>
-    <dt>X, Y</dt><dd>${x.toFixed(1)}, ${y.toFixed(1)}</dd><dt>Z</dt><dd>${z.toFixed(2)} m</dd>
-    <dt>Clase</dt><dd>${cls[i]} · ${classInfo(cls[i])[0]}</dd>
-    <dt>ACU</dt><dd>${Number.isNaN(a) ? '—' : a.toFixed(2) + ' m'}</dd>
-    <dt>RUN</dt><dd>${Number.isNaN(ru) ? '—' : ru.toFixed(3)}</dd></dl>`;
+  const dl = document.createElement('dl');
+  const row = (k, v) => {
+    const dt = document.createElement('dt'); dt.textContent = k;
+    const dd = document.createElement('dd'); dd.textContent = v;
+    dl.append(dt, dd);
+  };
+  row('X, Y', `${x.toFixed(1)}, ${y.toFixed(1)}`);
+  row('Z', `${z.toFixed(2)} m`);
+  row('Clase', `${cls[i]} · ${classInfo(cls[i])[0]}`);
+  row('ACU', Number.isNaN(a) ? '—' : a.toFixed(2) + ' m');
+  row('RUN', Number.isNaN(ru) ? '—' : ru.toFixed(3));
+  const h2 = document.createElement('h2'); h2.textContent = 'Punto';
+  box.replaceChildren(h2, dl);
   box.classList.remove('hidden');
 });
 
